@@ -265,9 +265,9 @@
       letter-spacing: 0.02em;
     }
 
-    /* DETALHES INFERIORES: EXATAMENTE IGUAL À FOTO
+    /* DETALHES INFERIORES: EXATAMENTE IGUAL À FOTO FORNECIDA
        ♪ CANTOR / ARTISTA (em azul ciano)
-       Filme / Cinema (em branco negrito) */
+       Filme / Cinema (em branco negrito com suporte a título dinâmico) */
     .meta-card {
       width: 100%;
       padding: 22px 26px;
@@ -289,12 +289,43 @@
       gap: 6px;
     }
 
+    .meta-artist-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
     .meta-artist {
       font-size: 1.65rem;
       font-weight: 800;
       color: #ffffff;
       line-height: 1.25;
       letter-spacing: -0.01em;
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+
+    .meta-artist:hover {
+      color: #e2e8f0;
+    }
+
+    .btn-edit-title {
+      background: transparent;
+      border: none;
+      color: #52525b;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+
+    .btn-edit-title:hover {
+      color: var(--accent-blue);
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .meta-track {
@@ -316,7 +347,7 @@
       color: #e4e4e7;
     }
 
-    /* Botão flutuante moderno para Ativar Som em Celulares (Autoplay com áudio) */
+    /* Botão flutuante moderno para Ativar Som em Celulares */
     .unmute-badge {
       position: absolute;
       top: 14px;
@@ -359,7 +390,7 @@
       }
     }
 
-    /* Tela para quando a página é aberta sem link no endereço (Segurança total) */
+    /* Tela quando aberta sem link na barra */
     .empty-state {
       display: flex;
       flex-direction: column;
@@ -385,7 +416,7 @@
     }
 
     /* ========================================================
-       TELA CHEIA (FULLSCREEN) PERFEITA PARA SMARTPHONES E DESKTOP
+       TELA CHEIA (FULLSCREEN)
        ======================================================== */
     .player-card:fullscreen,
     .player-card:-webkit-full-screen,
@@ -534,8 +565,7 @@
       <!-- Vídeo Nativo para streams e arquivos diretos -->
       <video id="nativeVideo" preload="metadata" playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;background:#000;pointer-events:none;"></video>
 
-      <!-- ESCUDOS ANTI-LINK E ANTI-ESPELHO:
-           Bloqueiam cliques no cabeçalho superior inteiro (onde ficam canais, logo e compartilhamento) -->
+      <!-- ESCUDOS ANTI-LINK E ANTI-ESPELHO -->
       <div class="shield-top-full" id="shieldTopFull" title="Filme em Reprodução"></div>
       <div class="shield-corner-right" id="shieldCornerRight"></div>
 
@@ -569,7 +599,7 @@
             <svg id="playPauseIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           </button>
 
-          <!-- Voltar para o início (Replay imediato do filme) -->
+          <!-- Voltar para o início (Replay imediato do filme/desenho) -->
           <button class="btn-ctrl" id="btnRestart" title="Voltar para o início">
             <svg viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
           </button>
@@ -594,16 +624,21 @@
       </div>
     </div>
 
-    <!-- Metadados: EXATAMENTE IGUAL À FOTO FORNECIDA -->
+    <!-- Metadados: EXIBIÇÃO DINÂMICA DO TÍTULO DO FILME OU DESENHO -->
     <div class="meta-card" id="metaCard">
       <div class="meta-tag">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-        CANTOR / ARTISTA
+        <span id="tagDisplay">CANTOR / ARTISTA</span>
       </div>
-      <div class="meta-artist" id="artistDisplay">Filme / Cinema</div>
-      <div class="meta-track" id="trackContainer" style="display: none;">
-        <span id="trackDisplay"></span>
-        <span class="meta-year" id="yearDisplay" style="display: none;">HD 1080p</span>
+      <div class="meta-artist-wrapper">
+        <div class="meta-artist" id="artistDisplay" title="Toque ou clique para renomear este filme/desenho">Filme / Cinema</div>
+        <button class="btn-edit-title" id="btnEditTitle" title="Editar título do filme/desenho">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        </button>
+      </div>
+      <div class="meta-track" id="trackContainer" style="display: flex;">
+        <span id="trackDisplay">Filme em Reprodução</span>
+        <span class="meta-year" id="yearDisplay">HD 1080p</span>
       </div>
     </div>
   </div>
@@ -624,11 +659,9 @@
   let currentRawUrl = '';
   let wakeLock = null;
   let fallbackWakeVideo = null;
-  let progressInterval = null;
-  let simulatedCurrentTime = 0;
-  let simulatedDuration = 0;
+  let currentMovieTitle = '';
 
-  // Bloqueio de desligamento de tela (Wake Lock) para celulares
+  // Bloqueio de desligamento de tela (Wake Lock)
   async function requestWakeLock() {
     if ('wakeLock' in navigator) {
       try {
@@ -695,9 +728,12 @@
   const scrubHandle = document.getElementById('scrubHandle');
   const btnFs = document.getElementById('btnFs');
 
+  const tagDisplay = document.getElementById('tagDisplay');
   const artistDisplay = document.getElementById('artistDisplay');
+  const trackContainer = document.getElementById('trackContainer');
   const trackDisplay = document.getElementById('trackDisplay');
   const yearDisplay = document.getElementById('yearDisplay');
+  const btnEditTitle = document.getElementById('btnEditTitle');
 
   // Bloqueio de menu de contexto (clique direito)
   document.addEventListener('contextmenu', e => e.preventDefault());
@@ -715,20 +751,78 @@
     return `${mins}:${pad(secs)}`;
   }
 
-  // Extrai ID de qualquer formato de link do site (incluindo m.ok.ru e ok.ru)
+  // Extrai ID numérico do vídeo
   function extractMediaId(url) {
     if (!url) return null;
     const str = url.trim();
-
-    // Formato m.ok.ru ou ok.ru /video/ID ou /videoembed/ID
     const videoMatch = str.match(/(?:m\.)?ok\.ru\/(?:video|videoembed|live)\/(\d+)/i);
     if (videoMatch) return videoMatch[1];
-
-    // Formato apenas com número do vídeo (ID direto com 10 a 16 dígitos)
     const pureIdMatch = str.match(/\b(\d{10,16})\b/);
     if (pureIdMatch) return pureIdMatch[1];
-
     return null;
+  }
+
+  // Analisador inteligente de Link e Título do Filme / Desenho
+  function parseLinkAndMetadata(rawInput) {
+    if (!rawInput) return { url: '', title: '', subtitle: '', year: '' };
+    let input = rawInput.trim();
+
+    try {
+      input = decodeURIComponent(input);
+    } catch (e) {}
+
+    let urlPart = input;
+    let title = '';
+    let subtitle = '';
+    let year = '';
+
+    // Formato com parâmetros: &t=, &title=, &titulo=, &nome=
+    const matchT = input.match(/[?&#](?:title|titulo|t|nome)=([^&]+)/i);
+    if (matchT) {
+      title = matchT[1].replace(/\+/g, ' ').trim();
+      urlPart = urlPart.replace(matchT[0], '');
+    }
+
+    const matchAno = input.match(/[?&#](?:year|ano|y)=([^&]+)/i);
+    if (matchAno) {
+      year = matchAno[1].trim();
+      urlPart = urlPart.replace(matchAno[0], '');
+    }
+
+    // Formato com separador PIPE: #URL|Titulo do Filme|Subtitulo
+    if (urlPart.includes('|')) {
+      const parts = urlPart.split('|');
+      urlPart = parts[0].trim();
+      if (!title && parts[1]) title = parts[1].trim();
+      if (!subtitle && parts[2]) subtitle = parts[2].trim();
+    }
+    // Formato com separador de traço após o link: #URL - Titulo do Filme
+    else if (!title) {
+      const matchDash = urlPart.match(/^(https?:\/\/[^\s]+|\d{10,16})\s*[-–—]\s*(.+)$/i);
+      if (matchDash) {
+        urlPart = matchDash[1].trim();
+        title = matchDash[2].trim();
+      }
+    }
+
+    // Detecta ano no nome do filme (ex: 1985 ou 2024)
+    if (title) {
+      const yMatch = title.match(/\b(19\d\d|20\d\d)\b/);
+      if (yMatch && !year) year = yMatch[1];
+    }
+
+    // Se for arquivo de vídeo direto (.mp4, .mkv)
+    if (!title && (urlPart.includes('.mp4') || urlPart.includes('.mkv') || urlPart.includes('.avi'))) {
+      const fn = urlPart.split('?')[0].split('/').pop();
+      if (fn) {
+        let cleanFn = fn.replace(/\.(mp4|mkv|webm|avi|mov)$/i, '');
+        const yMatch = cleanFn.match(/\b(19\d\d|20\d\d)\b/);
+        if (yMatch) year = yMatch[1];
+        title = cleanFn.replace(/[._-]+/g, ' ').trim();
+      }
+    }
+
+    return { url: urlPart.trim(), title, subtitle, year };
   }
 
   // Atualiza ícone do botão Play/Pause
@@ -742,14 +836,13 @@
     }
   }
 
-  // Efeito visual no indicador central
   function flashCenterIndicator(isPlayingState) {
     updatePlayPauseIcon(isPlayingState);
     centerIndicator.classList.add('show');
     setTimeout(() => centerIndicator.classList.remove('show'), 380);
   }
 
-  // BOTÃO: VOLTAR PARA O INÍCIO (Reinicia o filme imediatamente do segundo 00:00)
+  // BOTÃO: VOLTAR PARA O INÍCIO (Reinicia o filme imediatamente do 00:00)
   function reiniciarFilmeDoInicio() {
     if (isNative) {
       nativeVideo.currentTime = 0;
@@ -761,9 +854,7 @@
     }
 
     if (currentEmbedId) {
-      // Recarrega o iframe blindado do início absoluto com autoplay
       carregarIframeBlindado(currentEmbedId, true);
-      simulatedCurrentTime = 0;
       currentTimeDisplay.textContent = "0:00";
       scrubFill.style.width = '0%';
       scrubHandle.style.left = '0%';
@@ -799,7 +890,6 @@
     if (iframe && iframe.contentWindow) {
       try {
         if (isPlaying) {
-          // Pausa
           iframe.contentWindow.postMessage({ method: 'pause' }, '*');
           iframe.contentWindow.postMessage({ call: 'pause' }, '*');
           isPlaying = false;
@@ -807,7 +897,6 @@
           flashCenterIndicator(false);
           releaseWakeLock();
         } else {
-          // Play
           iframe.contentWindow.postMessage({ method: 'play' }, '*');
           iframe.contentWindow.postMessage({ call: 'play' }, '*');
           isPlaying = true;
@@ -863,7 +952,7 @@
     if (!e.data) return;
     if (e.data.event === 'timeupdate' || e.data.currentTime) {
       const cur = e.data.currentTime || e.data.time || 0;
-      const dur = e.data.duration || simulatedDuration;
+      const dur = e.data.duration || 0;
       if (cur > 0) {
         currentTimeDisplay.textContent = formatTime(cur);
         if (dur > 0) {
@@ -960,8 +1049,6 @@
     emptyState.style.display = 'none';
     playerCard.style.display = 'block';
 
-    // Cria Iframe com Sandbox Ultra-Seguro:
-    // Permite execução do vídeo sem permitir window.open(), popups, links target=_blank ou redirecionamento
     playerSlot.innerHTML = `
       <iframe id="playerIframe" 
               src="https://ok.ru/videoembed/${mediaId}?autoplay=${forceAutoplay ? 1 : 0}" 
@@ -971,11 +1058,9 @@
       </iframe>
     `;
 
-    // Escudos ativos
     shieldTopFull.style.display = 'block';
     shieldCornerRight.style.display = 'block';
 
-    // Botão auxiliar de som para dispositivos móveis
     unmuteBtn.style.display = 'flex';
     unmuteBtn.style.opacity = '1';
     setTimeout(() => {
@@ -990,6 +1075,54 @@
     updatePlayPauseIcon(true);
   }
 
+  // Atualiza os metadados visuais do filme/desenho na tela
+  function aplicarMetadados(title, subtitle, year) {
+    currentMovieTitle = title || '';
+
+    if (title) {
+      artistDisplay.textContent = title;
+      document.title = `${title} — Player`;
+    } else {
+      artistDisplay.textContent = "Filme / Cinema";
+      document.title = "Filme / Cinema";
+    }
+
+    if (subtitle) {
+      trackDisplay.textContent = subtitle;
+    } else {
+      trackDisplay.textContent = title ? "Filme / Desenho em Reprodução" : "Filme em Reprodução";
+    }
+
+    if (year) {
+      yearDisplay.textContent = year;
+      yearDisplay.style.display = 'inline-block';
+    } else {
+      yearDisplay.textContent = 'HD 1080p';
+      yearDisplay.style.display = 'inline-block';
+    }
+
+    trackContainer.style.display = 'flex';
+  }
+
+  // Permite editar o título e atualiza o link no navegador para fácil cópia
+  function editarTitulo() {
+    const atual = currentMovieTitle || artistDisplay.textContent;
+    const novo = prompt("Digite o título do filme ou desenho:", atual === "Filme / Cinema" ? "" : atual);
+    if (novo !== null && novo.trim() !== "") {
+      const tituloLimpo = novo.trim();
+      aplicarMetadados(tituloLimpo, "Filme / Desenho em Reprodução", "");
+
+      // Atualiza o hash na barra de endereços com o novo título
+      if (currentRawUrl) {
+        const linkBase = currentRawUrl.split('|')[0].split(' - ')[0].trim();
+        window.location.hash = `#${linkBase}|${tituloLimpo}`;
+      }
+    }
+  }
+
+  artistDisplay.onclick = editarTitulo;
+  btnEditTitle.onclick = editarTitulo;
+
   // Carregamento de vídeo a partir de URL ou Parâmetros
   function carregarVideo(rawInput) {
     if (!rawInput || !rawInput.trim()) {
@@ -998,42 +1131,18 @@
       return;
     }
 
-    const input = rawInput.trim();
-    currentRawUrl = input;
+    const { url, title, subtitle, year } = parseLinkAndMetadata(rawInput);
+    currentRawUrl = url || rawInput.trim();
 
-    // Extrai título customizado se passado nos parâmetros (ex: #url=...&title=MeuFilme)
-    let customTitle = '';
-    let customYear = '';
-    if (input.includes('&') || input.includes('?')) {
-      const matchTitle = input.match(/[?&]t(?:itle)?=([^&]+)/i);
-      if (matchTitle) customTitle = decodeURIComponent(matchTitle[1].replace(/\+/g, ' '));
-      const matchYear = input.match(/[?&]y(?:ear)?=([^&]+)/i);
-      if (matchYear) customYear = decodeURIComponent(matchYear[1]);
-    }
+    // Aplica o título do filme ou desenho imediatamente
+    aplicarMetadados(title, subtitle, year);
 
     // Identifica ID do filme
-    const mediaId = extractMediaId(input);
+    const mediaId = extractMediaId(url);
 
     if (mediaId) {
       carregarIframeBlindado(mediaId, true);
-
-      // Metadados visuais: exatamente idêntico à foto
-      artistDisplay.textContent = "Filme / Cinema";
-      const trackContainer = document.getElementById('trackContainer');
-      if (customTitle) {
-        trackDisplay.textContent = customTitle;
-        trackContainer.style.display = 'flex';
-        if (customYear) {
-          yearDisplay.textContent = customYear;
-          yearDisplay.style.display = 'inline-block';
-        } else {
-          yearDisplay.style.display = 'none';
-        }
-      } else {
-        trackContainer.style.display = 'none';
-      }
-
-    } else if (input.startsWith('http://') || input.startsWith('https://') || input.includes('.mp4') || input.includes('.mkv')) {
+    } else if (url.startsWith('http://') || url.startsWith('https://') || url.includes('.mp4') || url.includes('.mkv')) {
       // Modo stream direto / MP4
       isNative = true;
       currentEmbedId = null;
@@ -1045,12 +1154,7 @@
       shieldCornerRight.style.display = 'none';
       unmuteBtn.style.display = 'none';
 
-      artistDisplay.textContent = "Filme / Cinema";
-      trackDisplay.textContent = customTitle || "Filme em Transmissão";
-      yearDisplay.textContent = customYear || "HD 1080p";
-      yearDisplay.style.display = 'inline-block';
-
-      nativeVideo.src = input;
+      nativeVideo.src = url;
       nativeVideo.onloadedmetadata = () => {
         totalTimeDisplay.textContent = formatTime(nativeVideo.duration);
       };
@@ -1095,6 +1199,10 @@
     if (!link) {
       const params = new URLSearchParams(window.location.search);
       link = params.get('v') || params.get('url') || params.get('f');
+      const paramTitle = params.get('t') || params.get('title') || params.get('titulo');
+      if (link && paramTitle) {
+        link = `${link}|${paramTitle}`;
+      }
     }
 
     carregarVideo(link);
